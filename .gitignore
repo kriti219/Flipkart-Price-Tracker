@@ -1,0 +1,6 @@
+venv/
+output.html
+debug_screenshot.png
+__pycache__/
+*.pyc
+.env
