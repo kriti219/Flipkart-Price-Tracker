@@ -1,8 +1,10 @@
 from datetime import datetime
 from sqlalchemy import (
     Column, Integer, Float, String,
-    Boolean, DateTime, ForeignKey, Text
+    Boolean, DateTime, ForeignKey, Text,
+    UniqueConstraint
 )
+from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import relationship
 from db.connection import Base
 
@@ -10,13 +12,18 @@ from db.connection import Base
 class Product(Base):
     __tablename__ = "products"
 
-    id            = Column(Integer, primary_key=True, index=True)
-    url           = Column(Text, unique=True, nullable=False)
-    title         = Column(String(500), nullable=True)
-    user_email    = Column(String(255), nullable=False)
-    target_price  = Column(Float, nullable=False)
-    is_active     = Column(Boolean, default=True)
-    created_at    = Column(DateTime, default=datetime.utcnow)
+    __table_args__ = (
+        UniqueConstraint("url", "user_id", name="uq_product_url_user"),
+    )
+
+    id           = Column(Integer, primary_key=True, index=True)
+    user_id      = Column(PGUUID(as_uuid=True), nullable=True, index=True)
+    url          = Column(Text, nullable=False)
+    title        = Column(String(500), nullable=True)
+    user_email   = Column(String(255), nullable=False)
+    target_price = Column(Float, nullable=False)
+    is_active    = Column(Boolean, default=True)
+    created_at   = Column(DateTime, default=datetime.utcnow)
 
     price_history = relationship(
         "PriceHistory",
