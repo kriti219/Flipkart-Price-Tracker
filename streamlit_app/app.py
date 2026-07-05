@@ -34,7 +34,7 @@ supabase = create_client(
 
 st.set_page_config(
     page_title="Flipkart Price Tracker",
-    page_icon="🛒",
+    page_icon="🏷️",
     layout="wide",
     initial_sidebar_state="expanded",
 )
@@ -45,7 +45,7 @@ st.markdown("""
 <style>
     .main-header { font-size:2.2rem; font-weight:700; color:#2874f0; margin-bottom:0; }
     .sub-header  { font-size:1rem; color:#888; margin-top:0; margin-bottom:2rem; }
-    .auth-title  { font-size:1.8rem; font-weight:700; color:#2874f0; text-align:center; }
+    .auth-title  { font-size:3.5rem; font-weight:700; color:#00ffcc; text-align:center; }
     .auth-sub    { color:#888; font-size:0.95rem; text-align:center; margin-bottom:1.5rem; }
     .badge-instock    { background:#d4edda; color:#155724; padding:3px 10px; border-radius:12px; font-size:0.8rem; font-weight:600; }
     .badge-outofstock { background:#f8d7da; color:#721c24; padding:3px 10px; border-radius:12px; font-size:0.8rem; font-weight:600; }
@@ -84,7 +84,7 @@ if not check_api_health():
 def show_auth_screen():
     col1, col2, col3 = st.columns([1, 1.5, 1])
     with col2:
-        st.markdown('<p class="auth-title">🛒 Flipkart Price Tracker</p>', unsafe_allow_html=True)
+        st.markdown('<p class="auth-title">🏷️ Flipkart Price Tracker</p>', unsafe_allow_html=True)
         st.markdown(
             '<p class="auth-sub">Track prices. Get alerted when they drop.</p>',
             unsafe_allow_html=True,
@@ -262,7 +262,7 @@ def show_dashboard():
 
     # ── Header ────────────────────────────────────────────────────────────────
 
-    st.markdown('<p class="main-header">🛒 Flipkart Price Tracker</p>', unsafe_allow_html=True)
+    st.markdown('<p class="main-header">🏷️ Flipkart Price Tracker</p>', unsafe_allow_html=True)
     st.markdown(
         '<p class="sub-header">Track product prices and get alerted when they drop</p>',
         unsafe_allow_html=True,
@@ -288,7 +288,7 @@ def show_dashboard():
     with col1:
         st.metric("Total Tracked", len(active_products))
     with col2:
-        st.metric("Below Target 🎉", len(below_target))
+        st.metric("Below Target", len(below_target))
     with col3:
         st.metric("Out of Stock", len(unavailable))
     with col4:
@@ -346,7 +346,7 @@ def show_dashboard():
 
                 with action_col:
                     if product.get("is_active"):
-                        with st.expander("✏️ Edit"):
+                        with st.expander("Edit"):
                             new_price = st.number_input(
                                 "New target price (₹)",
                                 min_value=1.0,
@@ -452,6 +452,7 @@ def show_dashboard():
                         st.plotly_chart(
                             fig,
                             use_container_width=True,
+                            key=f"{key_prefix}chart_{product['id']}",
                             config={
                                 "displayModeBar": True,
                                 "modeBarButtonsToRemove": [
@@ -496,7 +497,7 @@ def show_dashboard():
         st.info(
             "You are not tracking any products yet. "
             "Use the sidebar to add your first product.",
-            icon="👈",
+            icon="⬅",
         )
     else:
         tab_active, tab_all = st.tabs([
