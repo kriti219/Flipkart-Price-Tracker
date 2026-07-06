@@ -35,8 +35,8 @@ jsonschema-specifications==2025.9.1
 lxml==6.1.1
 MarkupSafe==3.0.3
 multidict==6.7.1
-narwhals==2.23.0
-numpy==2.5.0
+narwhals
+numpy
 packaging==26.2
 pandas==3.0.3
 pillow==12.3.0
