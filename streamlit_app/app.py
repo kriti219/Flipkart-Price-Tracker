@@ -1,25 +1,14 @@
 import sys
 import os
 
-# ── Path setup ────────────────────────────────────────────────────────────────
-# Streamlit Cloud runs from repo root, so we need to explicitly add
-# both the repo root and the streamlit_app directory to sys.path
-
-_current_dir = os.path.dirname(os.path.abspath(__file__))
-_root_dir = os.path.dirname(_current_dir)
-
-# Add both directories at position 0 (highest priority)
-if _current_dir not in sys.path:
-    sys.path.insert(0, _current_dir)
-if _root_dir not in sys.path:
-    sys.path.insert(0, _root_dir)
+# Add repo root to path so api_client, charts, db, auth are all findable
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import streamlit as st
 from datetime import datetime
 from pathlib import Path
 from dotenv import load_dotenv
 from supabase import create_client
-import streamlit.components.v1 as components
 
 load_dotenv(Path(__file__).parent.parent / ".env")
 
@@ -38,31 +27,33 @@ logger = logging.getLogger(__name__)
 
 # ── Supabase client ───────────────────────────────────────────────────────────
 
-supabase_url = os.getenv("SUPABASE_URL") or st.secrets.get("SUPABASE_URL")
-supabase_key = os.getenv("SUPABASE_ANON_KEY") or st.secrets.get("SUPABASE_ANON_KEY")
+def get_supabase_client():
+    try:
+        url = st.secrets.get("SUPABASE_URL") or os.getenv("SUPABASE_URL")
+        key = st.secrets.get("SUPABASE_ANON_KEY") or os.getenv("SUPABASE_ANON_KEY")
+    except Exception:
+        url = os.getenv("SUPABASE_URL")
+        key = os.getenv("SUPABASE_ANON_KEY")
+    return create_client(url, key)
 
-if not supabase_url or not supabase_key:
-    st.error("Missing Supabase credentials. Please set them in your Streamlit Secrets.")
-
-supabase = create_client(supabase_url, supabase_key)
+supabase = get_supabase_client()
 
 # ── Page config ───────────────────────────────────────────────────────────────
 
 st.set_page_config(
     page_title="Flipkart Price Tracker",
-    page_icon="🏷️",
+    page_icon="🛒",
     layout="wide",
     initial_sidebar_state="expanded",
 )
 
 # ── CSS ───────────────────────────────────────────────────────────────────────
 
-
 st.markdown("""
 <style>
-    .main-header { font-size:2.2rem; font-weight:700; color:#f0f8ff; margin-bottom:0; }
+    .main-header { font-size:2.2rem; font-weight:700; color:#2874f0; margin-bottom:0; }
     .sub-header  { font-size:1rem; color:#888; margin-top:0; margin-bottom:2rem; }
-    .auth-title  { font-size:1.8rem; font-weight:700; color:#f0f8ff; text-align:center; }
+    .auth-title  { font-size:1.8rem; font-weight:700; color:#2874f0; text-align:center; }
     .auth-sub    { color:#888; font-size:0.95rem; text-align:center; margin-bottom:1.5rem; }
     .badge-instock    { background:#d4edda; color:#155724; padding:3px 10px;
                         border-radius:12px; font-size:0.8rem; font-weight:600; }
@@ -75,8 +66,12 @@ st.markdown("""
     div[data-testid="metric-container"] {
         background:#f8f9fa; border:1px solid #e0e0e0;
         border-radius:8px; padding:16px;
-        
-    
+    }
+    @media (max-width: 640px) {
+        [data-testid="column"] {
+            min-width: 100% !important;
+            flex: 1 1 100% !important;
+        }
     }
 </style>
 """, unsafe_allow_html=True)
@@ -90,10 +85,14 @@ if "user_email" not in st.session_state:
 
 # ── API health check ──────────────────────────────────────────────────────────
 
-if not check_api_health():
+with st.spinner("Connecting to backend..."):
+    api_ok = check_api_health()
+
+if not api_ok:
     st.error(
-        "Cannot connect to the FastAPI backend. "
-        "Run: `uvicorn main:app --reload`",
+        "Cannot connect to the backend API. "
+        "It may be waking up. Please refresh in 30 seconds.",
+        icon="🔴",
     )
     st.stop()
 
@@ -104,7 +103,7 @@ def show_auth_screen():
     col1, col2, col3 = st.columns([1, 1.5, 1])
     with col2:
         st.markdown(
-            '<p class="auth-title">🏷️ Flipkart Price Tracker</p>',
+            '<p class="auth-title">🛒 Flipkart Price Tracker</p>',
             unsafe_allow_html=True,
         )
         st.markdown(
@@ -114,22 +113,14 @@ def show_auth_screen():
 
         tab_login, tab_signup = st.tabs(["Sign In", "Create Account"])
 
-        # ── Sign In ───────────────────────────────────────────────────────────
         with tab_login:
             with st.form("login_form"):
-                email = st.text_input(
-                    "Email",
-                    placeholder="xyz@example.com",
-                )
+                email = st.text_input("Email", placeholder="you@example.com")
                 password = st.text_input(
-                    "Password",
-                    type="password",
-                    placeholder="••••••••",
+                    "Password", type="password", placeholder="••••••••"
                 )
                 login_btn = st.form_submit_button(
-                    "Sign In",
-                    use_container_width=True,
-                    type="primary",
+                    "Sign In", use_container_width=True, type="primary"
                 )
 
             if login_btn:
@@ -146,41 +137,31 @@ def show_auth_screen():
                                 response.session.access_token
                             )
                             st.session_state.user_email = response.user.email
-                            st.success("Signed in successfully!")
                             st.rerun()
                         except Exception as e:
                             error_msg = str(e)
                             if "Invalid login credentials" in error_msg:
                                 st.error("Incorrect email or password.")
                             elif "Email not confirmed" in error_msg:
-                                st.error(
-                                    "Please verify your email "
-                                    "before signing in."
-                                )
+                                st.error("Please verify your email first.")
                             else:
                                 st.error(f"Sign in failed: {error_msg}")
 
-        # ── Sign Up ───────────────────────────────────────────────────────────
         with tab_signup:
             with st.form("signup_form"):
                 new_email = st.text_input(
-                    "Email",
-                    placeholder="xyz@example.com",
+                    "Email", placeholder="you@example.com"
                 )
                 new_password = st.text_input(
-                    "Password",
-                    type="password",
-                    placeholder="Minimum 8 characters",
+                    "Password", type="password",
+                    placeholder="Minimum 6 characters"
                 )
                 confirm_password = st.text_input(
-                    "Confirm Password",
-                    type="password",
-                    placeholder="Re-enter password",
+                    "Confirm Password", type="password",
+                    placeholder="Re-enter password"
                 )
                 signup_btn = st.form_submit_button(
-                    "Create Account",
-                    use_container_width=True,
-                    type="primary",
+                    "Create Account", use_container_width=True, type="primary"
                 )
 
             if signup_btn:
@@ -188,8 +169,8 @@ def show_auth_screen():
                     st.error("Please fill in all fields")
                 elif "@" not in new_email:
                     st.error("Please enter a valid email address")
-                elif len(new_password) <= 8:
-                    st.error("Password must be at least 8 characters")
+                elif len(new_password) < 6:
+                    st.error("Password must be at least 6 characters")
                 elif new_password != confirm_password:
                     st.error("Passwords do not match")
                 else:
@@ -207,7 +188,6 @@ def show_auth_screen():
                                     st.session_state.user_email = (
                                         response.user.email
                                     )
-                                    st.success("Account created! Welcome.")
                                     st.rerun()
                                 else:
                                     st.success(
@@ -218,8 +198,7 @@ def show_auth_screen():
                             error_msg = str(e)
                             if "already registered" in error_msg.lower():
                                 st.error(
-                                    "An account with this email already "
-                                    "exists. Please sign in."
+                                    "Account already exists. Please sign in."
                                 )
                             else:
                                 st.error(f"Sign up failed: {error_msg}")
@@ -231,7 +210,6 @@ def show_dashboard():
     token = st.session_state.access_token
     user_email = st.session_state.user_email
 
-    # ── Sidebar ───────────────────────────────────────────────────────────────
     with st.sidebar:
         st.markdown(f"**Signed in as:**")
         st.markdown(f"`{user_email}`")
@@ -259,7 +237,6 @@ def show_dashboard():
                 max_value=1000000.0,
                 value=500.0,
                 step=50.0,
-                help="Alert me when price drops to or below this",
             )
             submitted = st.form_submit_button(
                 "Start Tracking",
@@ -308,10 +285,8 @@ def show_dashboard():
             "Prices auto-update every 6 hours via GitHub Actions."
         )
 
-    # ── Header ────────────────────────────────────────────────────────────────
-
     st.markdown(
-        '<p class="main-header">🏷️ Flipkart Price Tracker</p>',
+        '<p class="main-header">🛒 Flipkart Price Tracker</p>',
         unsafe_allow_html=True,
     )
     st.markdown(
@@ -320,8 +295,6 @@ def show_dashboard():
         '</p>',
         unsafe_allow_html=True,
     )
-
-    # ── Load products ─────────────────────────────────────────────────────────
 
     products = get_all_products(token=token)
     active_products = [p for p in products if p.get("is_active")]
@@ -335,8 +308,6 @@ def show_dashboard():
         if p.get("latest_availability") == "out_of_stock"
     ]
 
-    # ── Metrics ───────────────────────────────────────────────────────────────
-
     col1, col2, col3, col4 = st.columns(4)
     with col1:
         st.metric("Total Tracked", len(active_products))
@@ -348,8 +319,6 @@ def show_dashboard():
         st.metric("Last Refreshed", datetime.now().strftime("%H:%M"))
 
     st.divider()
-
-    # ── Product table ─────────────────────────────────────────────────────────
 
     def render_product_table(product_list: list, key_prefix: str = ""):
         if not product_list:
@@ -456,7 +425,6 @@ def show_dashboard():
                     else:
                         st.markdown("*Inactive*")
 
-                # ── Price history chart ───────────────────────────────────────
                 with st.expander("📈 View price history", expanded=False):
                     history = get_price_history(
                         product_id=product["id"],
@@ -467,7 +435,7 @@ def show_dashboard():
                     if not history:
                         st.info(
                             "No price history yet. "
-                            "Data will appear after the next scrape run."
+                            "Data appears after the next scrape run."
                         )
                     else:
                         stats = build_price_stats(
@@ -496,13 +464,15 @@ def show_dashboard():
                                 st.metric(
                                     "Below Target",
                                     f"{stats['times_below_target']}/"
-                                    f"{stats['in_stock_records']} checks",
+                                    f"{stats['in_stock_records']}",
                                 )
 
                         fig = build_price_history_chart(
                             history=history,
                             target_price=product.get("target_price", 0),
-                            product_title=product.get("title") or "Product",
+                            product_title=(
+                                product.get("title") or "Product"
+                            ),
                         )
 
                         if fig:
@@ -519,9 +489,7 @@ def show_dashboard():
                                 },
                             )
                         else:
-                            st.info(
-                                "Not enough data to render chart yet."
-                            )
+                            st.info("Not enough data to render chart yet.")
 
                         if st.checkbox(
                             "Show raw data",
@@ -549,8 +517,6 @@ def show_dashboard():
 
                 st.divider()
 
-    # ── Tabs ──────────────────────────────────────────────────────────────────
-
     if not products:
         st.info(
             "You are not tracking any products yet. "
@@ -566,8 +532,6 @@ def show_dashboard():
             render_product_table(active_products, key_prefix="active_")
         with tab_all:
             render_product_table(products, key_prefix="all_")
-
-    # ── Refresh button ────────────────────────────────────────────────────────
 
     col_left, col_right = st.columns([5, 1])
     with col_right:
