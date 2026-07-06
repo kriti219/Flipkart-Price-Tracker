@@ -26,6 +26,11 @@ jobs:
       - name: Install Playwright browsers
         run: playwright install chromium --with-deps
 
+      - name: Ping API to wake it up
+        env:
+          API_BASE_URL: ${{ secrets.API_BASE_URL }}
+        run: python keep_alive.py
+
       - name: Run scrape job
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
@@ -33,4 +38,5 @@ jobs:
           GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          API_BASE_URL: ${{ secrets.API_BASE_URL }}
         run: python scrape_job.py
