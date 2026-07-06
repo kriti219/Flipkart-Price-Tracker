@@ -7,6 +7,7 @@ from datetime import datetime
 from pathlib import Path
 from dotenv import load_dotenv
 from supabase import create_client
+import streamlit.components.v1 as components
 
 load_dotenv(Path(__file__).parent.parent / ".env")
 
@@ -41,11 +42,12 @@ st.set_page_config(
 
 # ── CSS ───────────────────────────────────────────────────────────────────────
 
+
 st.markdown("""
 <style>
     .main-header { font-size:2.2rem; font-weight:700; color:#2874f0; margin-bottom:0; }
     .sub-header  { font-size:1rem; color:#888; margin-top:0; margin-bottom:2rem; }
-    .auth-title  { font-size:1.8rem; font-weight:700; color:#2874f0; text-align:center; }
+    .auth-title  { font-size:1.8rem; font-weight:700; color:#f0f8ff; text-align:center; }
     .auth-sub    { color:#888; font-size:0.95rem; text-align:center; margin-bottom:1.5rem; }
     .badge-instock    { background:#d4edda; color:#155724; padding:3px 10px;
                         border-radius:12px; font-size:0.8rem; font-weight:600; }
@@ -58,6 +60,12 @@ st.markdown("""
     div[data-testid="metric-container"] {
         background:#f8f9fa; border:1px solid #e0e0e0;
         border-radius:8px; padding:16px;
+        
+    @media (max-width: 640px) {
+        [data-testid="column"] {
+            min-width: 100% !important;
+            flex: 1 1 100% !important;
+        }
     }
 </style>
 """, unsafe_allow_html=True)
@@ -101,7 +109,7 @@ def show_auth_screen():
             with st.form("login_form"):
                 email = st.text_input(
                     "Email",
-                    placeholder="you@example.com",
+                    placeholder="xyz@example.com",
                 )
                 password = st.text_input(
                     "Password",
@@ -147,7 +155,7 @@ def show_auth_screen():
             with st.form("signup_form"):
                 new_email = st.text_input(
                     "Email",
-                    placeholder="you@example.com",
+                    placeholder="xyz@example.com",
                 )
                 new_password = st.text_input(
                     "Password",
@@ -170,8 +178,8 @@ def show_auth_screen():
                     st.error("Please fill in all fields")
                 elif "@" not in new_email:
                     st.error("Please enter a valid email address")
-                elif len(new_password) < 8:
-                    st.error("Password must be at least 6 characters")
+                elif len(new_password) <= 8:
+                    st.error("Password must be at least 8 characters")
                 elif new_password != confirm_password:
                     st.error("Passwords do not match")
                 else:
