@@ -3,30 +3,11 @@ import requests
 import logging
 
 logger = logging.getLogger(__name__)
-
 TIMEOUT = 60
 
 
 def get_api_base_url() -> str:
-    """
-    Read API_BASE_URL with multiple fallbacks.
-    Priority: st.secrets → environment variable → localhost
-    """
-    # Try Streamlit secrets first (deployed environment)
-    try:
-        import streamlit as st
-        if "API_BASE_URL" in st.secrets:
-            return st.secrets["API_BASE_URL"]
-    except Exception:
-        pass
-
-    # Try environment variable (local development)
-    env_url = os.getenv("API_BASE_URL")
-    if env_url:
-        return env_url
-
-    # Final fallback
-    return "http://127.0.0.1:8000"
+    return os.getenv("API_BASE_URL", "http://127.0.0.1:8000")
 
 
 def _auth_headers(token: str) -> dict:
@@ -35,7 +16,6 @@ def _auth_headers(token: str) -> dict:
 
 def check_api_health() -> bool:
     api_url = get_api_base_url()
-    logger.info(f"Health check URL: {api_url}")  # add this
     for attempt in range(2):
         try:
             response = requests.get(
@@ -44,8 +24,7 @@ def check_api_health() -> bool:
             )
             if response.status_code == 200:
                 return True
-        except Exception as e:
-            logger.error(f"Health check attempt {attempt + 1} failed: {e}")
+        except Exception:
             if attempt == 0:
                 import time
                 time.sleep(5)

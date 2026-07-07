@@ -28,12 +28,12 @@ logger = logging.getLogger(__name__)
 # ── Supabase client ───────────────────────────────────────────────────────────
 
 def get_supabase_client():
-    try:
-        url = st.secrets.get("SUPABASE_URL") or os.getenv("SUPABASE_URL")
-        key = st.secrets.get("SUPABASE_ANON_KEY") or os.getenv("SUPABASE_ANON_KEY")
-    except Exception:
-        url = os.getenv("SUPABASE_URL")
-        key = os.getenv("SUPABASE_ANON_KEY")
+    url = os.getenv("SUPABASE_URL")
+    key = os.getenv("SUPABASE_ANON_KEY")
+    if not url or not key:
+        raise ValueError(
+            "SUPABASE_URL and SUPABASE_ANON_KEY must be set"
+        )
     return create_client(url, key)
 
 supabase = get_supabase_client()
